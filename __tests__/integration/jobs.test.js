@@ -11,6 +11,7 @@ const app = require('../../app');
 const db = require('../../db');
 
 let bobToken;
+let adaToken;
 beforeEach(async () => {
   // delete any data created by prior tests
   await db.query('DELETE FROM companies');
@@ -24,6 +25,15 @@ beforeEach(async () => {
     email: 'bobbbby@goodboy.com',
     photo_url: 'https://www.wow.com/pic.jpg',
     is_admin: false
+  });
+  await User.addUser({
+    username: 'ada',
+    password: '123456',
+    first_name: 'bobby',
+    last_name: 'wow',
+    email: 'ada@goodboy.com',
+    photo_url: 'https://www.wow.com/pic.jpg',
+    is_admin: true
   });
 
   await Company.addCompany({
@@ -59,8 +69,15 @@ beforeEach(async () => {
       username: 'bob',
       password: '123456'
     });
+  const adaResponse = await request(app)
+    .post('/login')
+    .send({
+      username: 'ada',
+      password: '123456'
+    });
 
   bobToken = bobResponse.body.token;
+  adaToken = adaResponse.body.token;
 });
 
 describe('POST /jobs', () => {
@@ -71,11 +88,28 @@ describe('POST /jobs', () => {
         title: 'CFO',
         salary: 100000,
         equity: 0.1,
-        company_handle: 'google'
+        company_handle: 'google',
+        _token: adaToken,
+        _username: 'ada'
       });
     const { job } = response.body;
     expect(response.statusCode).toBe(200);
     expect(job).toHaveProperty('title', 'CFO');
+  });
+  it('Adding a job failed, because the person is not admin', async () => {
+    const response = await request(app)
+      .post('/jobs')
+      .send({
+        title: 'CFO',
+        salary: 100000,
+        equity: 0.1,
+        company_handle: 'google',
+        _token: bobToken,
+        _username: 'bob'
+      });
+    const { error } = response.body;
+    expect(error.status).toBe(401);
+    expect(error).toHaveProperty('message');
   });
 
   it('Adding a job failed, equity invalid', async () => {
@@ -85,7 +119,9 @@ describe('POST /jobs', () => {
         title: 'CFO',
         salary: 100000,
         equity: 5,
-        company_handle: 'google'
+        company_handle: 'google',
+        _token: adaToken,
+        _username: 'ada'
       });
     const { error } = response.body;
     expect(error.status).toBe(400);
@@ -98,7 +134,9 @@ describe('POST /jobs', () => {
       .send({
         title: 'CFO',
         salary: 100000,
-        equity: 5
+        equity: 5,
+        _token: adaToken,
+        _username: 'ada'
       });
     const { error } = response.body;
     expect(error.status).toBe(400);
@@ -176,11 +214,32 @@ describe('PATCH /jobs/:id', () => {
         title: 'CEEEEEEEEO',
         salary: 5,
         equity: 0.0001,
-        company_handle: 'google'
+        company_handle: 'google',
+        _token: adaToken,
+        _username: 'ada'
       });
     const { job } = response.body;
     expect(response.statusCode).toBe(200);
     expect(job).toHaveProperty('title', 'CEEEEEEEEO');
+  });
+
+  it('fails to update because of not admin', async () => {
+    const jobs = await Job.getJobs({});
+    const firstId = jobs[0].id;
+
+    const response = await request(app)
+      .patch(`/jobs/${firstId}`)
+      .send({
+        title: 'CEEEEEEEEO',
+        salary: 5,
+        equity: 0.0001,
+        company_handle: 'wooooooooo',
+        _token: bobToken,
+        _username: 'bob'
+      });
+    const { error } = response.body;
+    expect(error.status).toBe(401);
+    expect(error).toHaveProperty('message');
   });
 
   it('fails to update because of invalid company', async () => {
@@ -193,7 +252,9 @@ describe('PATCH /jobs/:id', () => {
         title: 'CEEEEEEEEO',
         salary: 5,
         equity: 0.0001,
-        company_handle: 'wooooooooo'
+        company_handle: 'wooooooooo',
+        _token: adaToken,
+        _username: 'ada'
       });
     const { error } = response.body;
     expect(error.status).toBe(404);
@@ -207,7 +268,9 @@ describe('PATCH /jobs/:id', () => {
     const response = await request(app)
       .patch(`/jobs/${firstId}`)
       .send({
-        cookies: 'yes!'
+        cookies: 'yes!',
+        _token: adaToken,
+        _username: 'ada'
       });
 
     const { error } = response.body;
@@ -217,17 +280,32 @@ describe('PATCH /jobs/:id', () => {
 });
 
 describe('DELETE /jobs/:id', () => {
+  it('deleting a specific job failed because not admin ', async () => {
+    const jobs = await Job.getJobs({});
+    const firstId = jobs[0].id;
+    const response = await request(app)
+      .delete(`/jobs/${firstId}`)
+      .send({ _token: bobToken, _username: 'bob' });
+    const { error } = response.body;
+    expect(error.status).toBe(401);
+    expect(error).toHaveProperty('message');
+  });
+
   it('deletes a specific job successfully', async () => {
     const jobs = await Job.getJobs({});
     const firstId = jobs[0].id;
-    const response = await request(app).delete(`/jobs/${firstId}`);
+    const response = await request(app)
+      .delete(`/jobs/${firstId}`)
+      .send({ _token: adaToken, _username: 'ada' });
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toHaveProperty('message', 'Job deleted');
   });
 
   it('fails to delete non existing job', async () => {
-    const response = await request(app).delete(`/jobs/100000`);
+    const response = await request(app)
+      .delete(`/jobs/100000`)
+      .send({ _token: adaToken, _username: 'ada' });
 
     const { error } = response.body;
     expect(error.status).toBe(404);

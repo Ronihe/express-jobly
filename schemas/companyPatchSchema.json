@@ -5,6 +5,7 @@
   "type": "object",
   "title": "The Root Schema",
   "additionalProperties": false,
+  "required": ["_username", "_token"],
   "properties": {
     "name": {
       "$id": "#/properties/name",
@@ -40,6 +41,26 @@
       "minLength": 1,
       "pattern": "^(.*)$",
       "format": "uri"
+    },
+    "_username": {
+      "$id": "#/properties/_username",
+      "type": "string",
+      "title": "The _username Schema",
+      "default": "",
+      "examples": ["gin"],
+      "minLength": 1,
+      "pattern": "^(.*)$"
+    },
+    "_token": {
+      "$id": "#/properties/_token",
+      "type": "string",
+      "title": "The _token Schema",
+      "default": "",
+      "examples": [
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImdpbiIsImlhdCI6MTU0NTQ0MTMxN30.SYRLUlCPt9lWQZmAEh7TBzWgEjqrDpjaTzAm18iidmI"
+      ],
+      "minLength": 1,
+      "pattern": "^(.*)$"
     }
   }
 }

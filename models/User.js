@@ -71,7 +71,7 @@ class User {
   /** getUser -- get specific user */
   static async getUser(username) {
     const results = await db.query(
-      'SELECT username, first_name, last_name, email, photo_url FROM users WHERE username = $1',
+      `SELECT u.username, first_name, last_name, email, photo_url, is_admin, job_id,j.title, j.company_handle, a.state FROM users as u LEFT JOIN applications AS a ON u.username = a.username LEFT JOIN jobs AS j ON a.job_id = j.id WHERE u.username = $1`,
       [username]
     );
 

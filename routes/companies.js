@@ -3,7 +3,11 @@ const router = new express.Router();
 const Company = require('../models/Company');
 const Job = require('../models/Job');
 const APIError = require('../models/ApiError');
-const { ensureLoggedIn, ensureCorrectUser } = require('../middleware/auth');
+const {
+  ensureLoggedIn,
+  ensureCorrectUser,
+  ensureAdmin
+} = require('../middleware/auth');
 
 //json schema for company post
 const { validate } = require('jsonschema');
@@ -47,7 +51,7 @@ router.get('/', ensureLoggedIn, async (req, res, next) => {
  *
  * => {company: {companyData}}
  **/
-router.post('/', async (req, res, next) => {
+router.post('/', ensureAdmin, async (req, res, next) => {
   const result = validate(req.body, companyPostSchema);
 
   if (!result.valid) {
@@ -106,7 +110,7 @@ router.get('/:handle', ensureLoggedIn, async (req, res, next) => {
  }
  output: => {company: {companyData}}
  **/
-router.patch('/:handle', async (req, res, next) => {
+router.patch('/:handle', ensureAdmin, async (req, res, next) => {
   const result = validate(req.body, companyPatchSchema);
 
   if (!result.valid) {
@@ -136,7 +140,7 @@ router.patch('/:handle', async (req, res, next) => {
 /** DELETE /companies/:handle - delete company
 input: handle (parameter)
  **/
-router.delete('/:handle', async (req, res, next) => {
+router.delete('/:handle', ensureAdmin, async (req, res, next) => {
   try {
     const handle = req.params.handle;
     await Company.deleteCompany(handle);

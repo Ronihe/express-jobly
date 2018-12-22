@@ -4,6 +4,10 @@ const express = require('express');
 const app = express();
 app.use(express.json()); // middleware to parse json, so express can read json
 const APIError = require('./models/ApiError');
+const userSetup = require('./helpers/addUserData');
+
+//add user data
+//userSetup();
 
 // add logging system
 const morgan = require('morgan');

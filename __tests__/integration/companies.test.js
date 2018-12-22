@@ -11,6 +11,7 @@ const app = require('../../app');
 const db = require('../../db');
 
 let bobToken;
+let adaToken;
 
 beforeEach(async () => {
   // delete any data created by prior tests
@@ -25,6 +26,16 @@ beforeEach(async () => {
     email: 'bobbbby@goodboy.com',
     photo_url: 'https://www.wow.com/pic.jpg',
     is_admin: false
+  });
+
+  await User.addUser({
+    username: 'ada',
+    password: '123456',
+    first_name: 'bobby',
+    last_name: 'wow',
+    email: 'ada@goodboy.com',
+    photo_url: 'https://www.wow.com/pic.jpg',
+    is_admin: true
   });
 
   await Company.addCompany({
@@ -60,7 +71,15 @@ beforeEach(async () => {
       password: '123456'
     });
 
+  const adaResponse = await request(app)
+    .post('/login')
+    .send({
+      username: 'ada',
+      password: '123456'
+    });
+
   bobToken = bobResponse.body.token;
+  adaToken = adaResponse.body.token;
 });
 
 describe('GET /companies', () => {
@@ -125,12 +144,32 @@ describe('POST /companies', () => {
         name: 'Apple Inc',
         num_employees: 300,
         description: 'Amazing Cooking',
-        logo_url: 'https://www.amazingcooking.com/logo.png'
+        logo_url: 'https://www.amazingcooking.com/logo.png',
+        _token: adaToken,
+        _username: 'ada'
       });
 
     const { company } = response.body;
     expect(response.statusCode).toBe(200);
     expect(company).toHaveProperty('handle', 'apple');
+  });
+
+  it('Adding a company succeeded', async () => {
+    const response = await request(app)
+      .post(`/companies`)
+      .send({
+        handle: 'apple',
+        name: 'Apple Inc',
+        num_employees: 300,
+        description: 'Amazing Cooking',
+        logo_url: 'https://www.amazingcooking.com/logo.png',
+        _token: bobToken,
+        _username: 'bob'
+      });
+
+    const { error } = response.body;
+    expect(error.status).toBe(401);
+    expect(error).toHaveProperty('message');
   });
 
   it('Adding a company failed because already exists', async () => {
@@ -139,7 +178,9 @@ describe('POST /companies', () => {
       .send({
         handle: 'roni',
         name: 'Roni Inc',
-        num_employees: 5
+        num_employees: 5,
+        _token: adaToken,
+        _username: 'ada'
       });
 
     const { error } = response.body;
@@ -151,7 +192,9 @@ describe('POST /companies', () => {
       .post(`/companies`)
       .send({
         name: 'Roni Inc',
-        num_employees: 5
+        num_employees: 5,
+        _token: adaToken,
+        _username: 'ada'
       });
 
     const { error } = response.body;
@@ -189,13 +232,31 @@ describe('PATCH /companies/:handle', () => {
         name: 'RoniTechCorp',
         num_employees: 1000,
         description: 'Roni Tech 2.0',
-        logo_url: 'https://www.ronitechcorp.com/wow.jpg'
+        logo_url: 'https://www.ronitechcorp.com/wow.jpg',
+        _token: adaToken,
+        _username: 'ada'
       });
 
     const { company } = response.body;
     expect(response.statusCode).toBe(200);
     expect(company).toHaveProperty('handle', 'roni');
     expect(company).toHaveProperty('num_employees', 1000);
+  });
+
+  it('fails to update non existent company, because of not admin', async () => {
+    const response = await request(app)
+      .patch(`/companies/roni`)
+      .send({
+        name: 'Waaaaw',
+        num_employees: 10,
+        description: 'What 2.0',
+        logo_url: 'https://www.iamlost.com/no.jpg',
+        _token: bobToken,
+        _username: 'bob'
+      });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.body.error).toHaveProperty('message');
   });
 
   it('fails to update non existent company', async () => {
@@ -205,7 +266,9 @@ describe('PATCH /companies/:handle', () => {
         name: 'Wow',
         num_employees: 10,
         description: 'What 2.0',
-        logo_url: 'https://www.iamlost.com/no.jpg'
+        logo_url: 'https://www.iamlost.com/no.jpg',
+        _token: adaToken,
+        _username: 'ada'
       });
 
     expect(response.statusCode).toBe(404);
@@ -215,7 +278,12 @@ describe('PATCH /companies/:handle', () => {
 
 describe('DELETE /companies/:handle', () => {
   it('deleting a company succeeded', async () => {
-    const response = await request(app).delete(`/companies/google`);
+    const response = await request(app)
+      .delete(`/companies/google`)
+      .send({
+        _token: adaToken,
+        _username: 'ada'
+      });
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toHaveProperty('message', 'Company deleted');
@@ -227,11 +295,26 @@ describe('DELETE /companies/:handle', () => {
     expect(response2.statusCode).toBe(404);
   });
 
-  it('deleting a company failed', async () => {
-    const response = await request(app).delete(`/companies/whowowwhen`);
+  it('deleting a company failed bevause of non admin', async () => {
+    const response = await request(app)
+      .delete(`/companies/google`)
+      .send({
+        _token: bobToken,
+        _username: 'bob'
+      });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('deleting a company failed, because it can not find the company', async () => {
+    const response = await request(app)
+      .delete(`/companies/whowowwhen`)
+      .send({
+        _token: adaToken,
+        _username: 'ada'
+      });
 
     expect(response.statusCode).toBe(404);
-    expect(response.body.error.message).toEqual('Company not found.');
   });
 });
 

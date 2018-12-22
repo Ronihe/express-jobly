@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS applications;
 DROP TABLE IF EXISTS jobs;
 DROP TABLE IF EXISTS companies;
 DROP TABLE IF EXISTS users;
@@ -53,3 +54,19 @@ VALUES
     ('gin', '123456', 'gin', 'w', 'gw@abcdefghijklmon.com', true),
     ('joe', '123456', 'joe', 'a', 'ja@yay.com', false),
     ('michael', '123456', 'mic', 'b', 'mb@ohno.com', false);
+
+
+CREATE TABLE applications
+(
+    username text REFERENCES users ON DELETE CASCADE,
+    job_id INTEGER REFERENCES jobs ON DELETE CASCADE,
+    state text NOT NULL,
+    created_at TIMESTAMP default CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (username, job_id) 
+);
+INSERT INTO applications
+    (username, job_id, state)
+VALUES
+    ('joe', 1, 'pending'),
+    ('gin', 2, 'applied');
+

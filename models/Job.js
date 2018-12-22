@@ -104,13 +104,11 @@ class Job {
 
     // parseJob Details  for company_handle
     const updatedCompHandle = jobDetails.company_handle;
-
     // check updated Company exists, if not throws error
-    await Company.getCompany(updatedCompHandle);
 
+    await Company.getCompany(updatedCompHandle);
     const { query, values } = sqlForPartialUpdate('jobs', jobDetails, 'id', id);
     const jobResults = await db.query(query, values);
-
     return jobResults.rows[0];
   }
 

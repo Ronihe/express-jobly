@@ -2,7 +2,11 @@ const express = require('express');
 const router = new express.Router();
 const Job = require('../models/Job');
 const APIError = require('../models/ApiError');
-const { ensureLoggedIn, ensureCorrectUser } = require('../middleware/auth');
+const {
+  ensureLoggedIn,
+  ensureCorrectUser,
+  ensureAdmin
+} = require('../middleware/auth');
 
 //json schema for company post
 const { validate } = require('jsonschema');
@@ -29,7 +33,7 @@ const jobPatchSchema = require('../schemas/jobPatchSchema.json');
   }
 }
  **/
-router.post('/', async (req, res, next) => {
+router.post('/', ensureAdmin, async (req, res, next) => {
   const result = validate(req.body, jobPostSchema);
 
   if (!result.valid) {
@@ -99,9 +103,8 @@ router.get('/:id', ensureLoggedIn, async (req, res, next) => {
  *
  * => {jobs: {jobData}}
  **/
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', ensureAdmin, async (req, res, next) => {
   const result = validate(req.body, jobPatchSchema);
-
   if (!result.valid) {
     // pass validation errors to error handler
     let message = result.errors.map(error => error.stack);
@@ -113,6 +116,7 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
     const job = await Job.patchJob(+id, req.body);
+    //console.log(job);
     return res.json({ job });
   } catch (err) {
     let error;
@@ -133,7 +137,7 @@ router.patch('/:id', async (req, res, next) => {
  *
  * => {message: "Job deleted"}
  **/
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', ensureAdmin, async (req, res, next) => {
   try {
     const { id } = req.params;
     const job = await Job.deleteJob(+id);
